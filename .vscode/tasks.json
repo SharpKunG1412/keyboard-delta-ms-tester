@@ -12,7 +12,7 @@
                 "-static-libstdc++",
                 "-I${workspaceFolder}\\include",
                 "-L${workspaceFolder}\\lib",
-                "${workspaceFolder}\\src\\main_pr.cpp",
+                "${workspaceFolder}\\src\\main.cpp",
                 "${workspaceFolder}\\src\\glad.c",
                 "-lglfw3dll",
                 "-lglfw3",
