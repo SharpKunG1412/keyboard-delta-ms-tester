@@ -92,7 +92,7 @@ void input_loop()
 		if (TEST_POLLING_RATE == 2)
 		{
 
-			if (input_times.size() > 0 && input_key[input_times.size() - 1] == ' ')
+			if (input_times.size() > 0 && (input_key[input_times.size() - 1] == ' ' || input_key[input_times.size() - 1] == 'D' ))
 			{
 				for (int x = 1; x < input_times.size(); ++x)
 				{
@@ -113,7 +113,7 @@ void input_loop()
 						{
 							interlock[addrs] = false;
 							float result = float_millisecond(input_times[x] - ref_time).count();
-							float mem;
+							float mem, result_b = result;
 							// check is new min or new max
 							if (result > -500.0 && result < 500.0)
 							{
@@ -177,11 +177,12 @@ void input_loop()
 										delta_avg[addrs] = (delta_avg[addrs] * (float)key_count[addrs] + result)/float(key_count[addrs]+1);
 								}
 								key_count[addrs]++;
-								std::cout << "-----------------\n";
+								std::cout << "\n";
 								std::cout << "----- press -----\n";
 								std::cout << "minimum that reject " << avoid_min[0][0] << " " << avoid_min[1][0] << " " << avoid_min[2][0] << " " << avoid_min[3][0] << " " << avoid_min[4][0] << '\n';
 								std::cout << "maximum that reject " << avoid_max[0][0] << " " << avoid_max[1][0] << " " << avoid_max[2][0] << " " << avoid_max[3][0] << " " << avoid_max[4][0] << '\n';
-								std::cout << result << " | avg " << delta_avg[0] << " | key_count " << key_count[0] << '\n';
+								std::cout << "curr " << result_b << " | " << " sel " << result << '\n';
+								std::cout << "avg " << delta_avg[0] << " | key_count " << key_count[0] << '\n';
 							}
 						}
 					}
@@ -206,7 +207,7 @@ void input_loop()
 						{
 							interlock2[addrs] = false;
 							float result = float_millisecond(input_times[x] - ref_time2).count();
-							float mem;
+							float mem, result_b = result;
 							// check is new min or new max
 							if (result > -500.0 && result < 500.0)
 							{
@@ -273,8 +274,9 @@ void input_loop()
 								std::cout << "----- release -----\n";
 								std::cout << "minimum that reject " <<  avoid_min2[0][0] << " " << avoid_min2[1][0] << " " << avoid_min2[2][0] << " " << avoid_min2[3][0] << " " << avoid_min2[4][0] << '\n';
 								std::cout << "maximum that reject " << avoid_max2[0][0] << " " << avoid_max2[1][0] << " " << avoid_max2[2][0] << " " << avoid_max2[3][0] << " " << avoid_max2[4][0] << '\n';
-								std::cout << result << " | avg " << delta_avg2[0] << " | key_count " << key_count2[0] << '\n';
-								std::cout << "-------------------\n";
+								std::cout << "curr " << result_b << " | " << " sel " << result << '\n';
+								std::cout << "avg " << delta_avg2[0] << " | key_count " << key_count2[0] << '\n';
+								std::cout << "\n";
 							}
 						}
 					}
@@ -285,6 +287,12 @@ void input_loop()
 					input_key = {input_key.back()};
 					input_state = {input_state.back()};
 				}
+			}
+			else if (input_times.size() > 0 && (input_key[input_times.size() - 1] == 'R'))
+			{
+				input_times = {input_times.back()};
+				input_key = {input_key.back()};
+				input_state = {input_state.back()};
 			}
 		}
 	}
