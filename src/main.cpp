@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <math.h>
 
 #define TEST_POLLING_RATE 2 // 0 = don't. 1 = old mode, instant console output, creates issues with simultaneous keypresses. 2 = new mode, console output batched until end.
 // currently, keyboard polling and mouse polling are mixed together, so only move your keyboard or your mouse, but not both simultaneously
@@ -15,19 +16,25 @@ GLFWwindow *window;
 std::vector<frame_clock::time_point> input_times;
 std::vector<char> input_key;
 std::vector<char> input_state;
-float delta_avg[26] = {0.0};
-int key_count[26] = {-10};
-float avoid_min[5][26] = {10000.0}; // remove 5 maximum and 5 minimum value to minimize error during measurement
-float avoid_max[5][26] = {-10000.0};
-float prepareminmax[10][26];
-bool interlock[26] = {false}; // avoid from double press after C key is set as ref_time
+float delta_avg = {0.0};
+float raw[1000] = {0.0};
+float stdr = 0.0;
+float abso = 0.0;
+int key_count = {-10};
+float avoid_min[5] = {10000.0}; // remove 5 maximum and 5 minimum value to minimize error during measurement
+float avoid_max[5] = {-10000.0};
+float prepareminmax[10];
+bool interlock = {false}; // avoid from double press after C key is set as ref_time
 
-float delta_avg2[26] = {0.0};
-int key_count2[26] = {-10};
-float avoid_min2[5][26] = {10000.0}; // remove 5 maximum and 5 minimum value to minimize error during measurement
-float avoid_max2[5][26] = {-10000.0};
-float prepareminmax2[10][26];
-bool interlock2[26] = {false}; // avoid from double press after C key is set as ref_time
+float delta_avg2 = {0.0};
+float raw2[1000] = {0.0};
+float stdr2 = 0.0;
+float abso2 = 0.0;
+int key_count2 = {-10};
+float avoid_min2[5] = {10000.0}; // remove 5 maximum and 5 minimum value to minimize error during measurement
+float avoid_max2[5] = {-10000.0};
+float prepareminmax2[10];
+bool interlock2 = {false}; // avoid from double press after C key is set as ref_time
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -100,89 +107,102 @@ void input_loop()
 					{
 						ref_time = input_times[x];
 						for (int i = 0; i < 26; i++)
-							interlock[i] = true;
+							interlock = true;
 						break;
 					}
 				}
 				for (int x = 1; x < input_times.size(); ++x)
 				{
-					if (input_key[x] >= 'A' && input_key[x] <= 'B' && input_state[x] == 'v')
+					if (input_key[x] >= 'G' && input_key[x] <= 'H' && input_state[x] == 'v')
 					{
-						short addrs = input_key[x] - 'A';
-						if (interlock[addrs] == true)
+						if (interlock == true)
 						{
-							interlock[addrs] = false;
+							interlock = false;
 							float result = float_millisecond(input_times[x] - ref_time).count();
 							float mem, result_b = result;
 							// check is new min or new max
 							if (result > -500.0 && result < 500.0)
 							{
-								if(key_count[addrs] < 0)
+								if(key_count < 0)
 								{
-									prepareminmax[key_count[addrs]+10][addrs] = result;
+									prepareminmax[key_count+10] = result;
 								}
 								else
 								{
-									if(key_count[addrs] == 0)
+									if(key_count == 0)
 									{
 										for(int i = 9; i >= 0; --i)
 										{
 											for(int j = 0; j < i; ++j)
 											{
-												if(prepareminmax[j][addrs] > prepareminmax[j+1][addrs])
+												if(prepareminmax[j] > prepareminmax[j+1])
 												{
-													mem = prepareminmax[j][addrs];
-													prepareminmax[j][addrs] = prepareminmax[j+1][addrs];
-													prepareminmax[j+1][addrs] = mem;
+													mem = prepareminmax[j];
+													prepareminmax[j] = prepareminmax[j+1];
+													prepareminmax[j+1] = mem;
 												}
 											}
 										}
 										for(int i = 0; i < 5; ++i)
 										{
-											avoid_min[4-i][addrs] = prepareminmax[i][addrs];
-											avoid_max[4-i][addrs] = prepareminmax[9-i][addrs];
+											avoid_min[4-i] = prepareminmax[i];
+											avoid_max[4-i] = prepareminmax[9-i];
 										}
 									}
-									if (result > avoid_max[0][addrs])
+									if (result > avoid_max[0])
 									{
 										mem = result;
-										result = avoid_max[0][addrs];
-										avoid_max[0][addrs] = mem;
+										result = avoid_max[0];
+										avoid_max[0] = mem;
 										for(int i = 0; i < 4; ++i)
 										{
-											if (avoid_max[i][addrs] > avoid_max[i+1][addrs])
+											if (avoid_max[i] > avoid_max[i+1])
 											{
-												mem = avoid_max[i][addrs];
-												avoid_max[i][addrs] = avoid_max[i+1][addrs];
-												avoid_max[i+1][addrs] = mem;
+												mem = avoid_max[i];
+												avoid_max[i] = avoid_max[i+1];
+												avoid_max[i+1] = mem;
 											}
 										}
 									}
-									else if (result < avoid_min[0][addrs])
+									else if (result < avoid_min[0])
 									{
 										mem = result;
-										result = avoid_min[0][addrs];
-										avoid_min[0][addrs] = mem;
+										result = avoid_min[0];
+										avoid_min[0] = mem;
 										for(int i = 0; i < 4; ++i)
 										{
-											if (avoid_min[i][addrs] < avoid_min[i+1][addrs])
+											if (avoid_min[i] < avoid_min[i+1])
 											{
-												mem = avoid_min[i][addrs];
-												avoid_min[i][addrs] = avoid_min[i+1][addrs];
-												avoid_min[i+1][addrs] = mem;
+												mem = avoid_min[i];
+												avoid_min[i] = avoid_min[i+1];
+												avoid_min[i+1] = mem;
 											}
 										}
 									}
 									if(result > -9999 && result < 9999)
-										delta_avg[addrs] = (delta_avg[addrs] * (float)key_count[addrs] + result)/float(key_count[addrs]+1);
+									{
+										delta_avg = (delta_avg * (float)key_count + result)/float(key_count+1);
+										if(key_count > 500)
+											return;
+										raw[key_count] = result;
+									}
 								}
-								key_count[addrs]++;
+								key_count++;
+
+								stdr = 0.0;
+								for (int s = 0; s < key_count; s++)
+								{
+									abso = raw[s] - delta_avg;
+									stdr += abso * abso;
+								}
 								std::cout << "\n";
 								std::cout << "----- press -----\n";
-								std::cout << "minimum that reject " << avoid_min[0][0] << " " << avoid_min[1][0] << " " << avoid_min[2][0] << " " << avoid_min[3][0] << " " << avoid_min[4][0] << '\n';
-								std::cout << "maximum that reject " << avoid_max[0][0] << " " << avoid_max[1][0] << " " << avoid_max[2][0] << " " << avoid_max[3][0] << " " << avoid_max[4][0] << '\n';
+								std::cout << "minimum that reject " << avoid_min[0] << " " << avoid_min[1] << " " << avoid_min[2] << " " << avoid_min[3] << " " << avoid_min[4] << '\n';
+								std::cout << "maximum that reject " << avoid_max[0] << " " << avoid_max[1] << " " << avoid_max[2] << " " << avoid_max[3] << " " << avoid_max[4] << '\n';
 								std::cout << "curr " << result_b << " | " << " sel " << result << '\n';
-								std::cout << "avg " << delta_avg[0] << " | key_count " << key_count[0] << '\n';
+								std::cout << "avg " << delta_avg << " | key_count " << key_count << '\n';
+								if(key_count > 1)
+									std::cout << "std " << sqrt(stdr/(key_count)) << '\n';
 							}
 						}
 					}
@@ -194,88 +214,101 @@ void input_loop()
 					{
 						ref_time2 = input_times[x];
 						for (int i = 0; i < 26; i++)
-							interlock2[i] = true;
+							interlock2 = true;
 						break;
 					}
 				}
 				for (int x = 1; x < input_times.size(); ++x)
 				{
-					if (input_key[x] >= 'A' && input_key[x] <= 'B' && input_state[x] == '^')
+					if (input_key[x] >= 'G' && input_key[x] <= 'H' && input_state[x] == '^')
 					{
-						short addrs = input_key[x] - 'A';
-						if (interlock2[addrs] == true)
+						if (interlock2 == true)
 						{
-							interlock2[addrs] = false;
+							interlock2 = false;
 							float result = float_millisecond(input_times[x] - ref_time2).count();
 							float mem, result_b = result;
 							// check is new min or new max
 							if (result > -500.0 && result < 500.0)
 							{
-								if(key_count2[addrs] < 0)
+								if(key_count2 < 0)
 								{
-									prepareminmax2[key_count2[addrs]+10][addrs] = result;
+									prepareminmax2[key_count2+10] = result;
 								}
 								else
 								{
-									if(key_count2[addrs] == 0)
+									if(key_count2 == 0)
 									{
 										for(int i = 9; i >= 0; --i)
 										{
 											for(int j = 0; j < i; ++j)
 											{
-												if(prepareminmax2[j][addrs] > prepareminmax2[j+1][addrs])
+												if(prepareminmax2[j] > prepareminmax2[j+1])
 												{
-													mem = prepareminmax2[j][addrs];
-													prepareminmax2[j][addrs] = prepareminmax2[j+1][addrs];
-													prepareminmax2[j+1][addrs] = mem;
+													mem = prepareminmax2[j];
+													prepareminmax2[j] = prepareminmax2[j+1];
+													prepareminmax2[j+1] = mem;
 												}
 											}
 										}
 										for(int i = 0; i < 5; ++i)
 										{
-											avoid_min2[4-i][addrs] = prepareminmax2[i][addrs];
-											avoid_max2[4-i][addrs] = prepareminmax2[9-i][addrs];
+											avoid_min2[4-i] = prepareminmax2[i];
+											avoid_max2[4-i] = prepareminmax2[9-i];
 										}
 									}
-									if (result > avoid_max2[0][addrs])
+									if (result > avoid_max2[0])
 									{
 										mem = result;
-										result = avoid_max2[0][addrs];
-										avoid_max2[0][addrs] = mem;
+										result = avoid_max2[0];
+										avoid_max2[0] = mem;
 										for(int i = 0; i < 4; ++i)
 										{
-											if (avoid_max2[i][addrs] > avoid_max2[i+1][addrs])
+											if (avoid_max2[i] > avoid_max2[i+1])
 											{
-												mem = avoid_max2[i][addrs];
-												avoid_max2[i][addrs] = avoid_max2[i+1][addrs];
-												avoid_max2[i+1][addrs] = mem;
+												mem = avoid_max2[i];
+												avoid_max2[i] = avoid_max2[i+1];
+												avoid_max2[i+1] = mem;
 											}
 										}
 									}
-									else if (result < avoid_min2[0][addrs])
+									else if (result < avoid_min2[0])
 									{
 										mem = result;
-										result = avoid_min2[0][addrs];
-										avoid_min2[0][addrs] = mem;
+										result = avoid_min2[0];
+										avoid_min2[0] = mem;
 										for(int i = 0; i < 4; ++i)
 										{
-											if (avoid_min2[i][addrs] < avoid_min2[i+1][addrs])
+											if (avoid_min2[i] < avoid_min2[i+1])
 											{
-												mem = avoid_min2[i][addrs];
-												avoid_min2[i][addrs] = avoid_min2[i+1][addrs];
-												avoid_min2[i+1][addrs] = mem;
+												mem = avoid_min2[i];
+												avoid_min2[i] = avoid_min2[i+1];
+												avoid_min2[i+1] = mem;
 											}
 										}
 									}
 									if(result > -9999 && result < 9999)
-										delta_avg2[addrs] = (delta_avg2[addrs] * (float)key_count2[addrs] + result)/float(key_count2[addrs]+1);
+									{
+										delta_avg2 = (delta_avg2 * (float)key_count2 + result)/float(key_count2+1);
+										if(key_count2 > 500)
+											return;
+										raw2[key_count2] = result;
+									}
 								}
-								key_count2[addrs]++;
+								key_count2++;
+
+								stdr2 = 0.0;
+								for (int s = 0; s < key_count2; s++)
+								{
+									abso2 = raw2[s] - delta_avg2;
+									stdr2 += abso2 * abso2;
+								}
 								std::cout << "----- release -----\n";
-								std::cout << "minimum that reject " <<  avoid_min2[0][0] << " " << avoid_min2[1][0] << " " << avoid_min2[2][0] << " " << avoid_min2[3][0] << " " << avoid_min2[4][0] << '\n';
-								std::cout << "maximum that reject " << avoid_max2[0][0] << " " << avoid_max2[1][0] << " " << avoid_max2[2][0] << " " << avoid_max2[3][0] << " " << avoid_max2[4][0] << '\n';
+								std::cout << "minimum that reject " <<  avoid_min2[0] << " " << avoid_min2[1] << " " << avoid_min2[2] << " " << avoid_min2[3] << " " << avoid_min2[4] << '\n';
+								std::cout << "maximum that reject " << avoid_max2[0] << " " << avoid_max2[1] << " " << avoid_max2[2] << " " << avoid_max2[3] << " " << avoid_max2[4] << '\n';
 								std::cout << "curr " << result_b << " | " << " sel " << result << '\n';
-								std::cout << "avg " << delta_avg2[0] << " | key_count " << key_count2[0] << '\n';
+								std::cout << "avg " << delta_avg2 << " | key_count " << key_count2 << '\n';
+								if(key_count2 > 1)
+									std::cout << "std " << sqrt(stdr2/(key_count2)) << '\n';
 								std::cout << "\n";
 							}
 						}
@@ -302,13 +335,10 @@ int main()
 {
 	for(int i = 0; i < 5; ++i)
 	{
-		for(int j = 0; j < 26; ++j)
-		{
-			avoid_min[i][j] = 10000.0;
-			avoid_max[i][j] = -10000.0;
-			avoid_min2[i][j] = 10000.0;
-			avoid_max2[i][j] = -10000.0;
-		}
+		avoid_min[i] = 10000.0;
+		avoid_max[i] = -10000.0;
+		avoid_min2[i] = 10000.0;
+		avoid_max2[i] = -10000.0;
 	}	
 			
 	glfwInit();
