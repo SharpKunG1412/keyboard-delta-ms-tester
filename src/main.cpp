@@ -113,7 +113,7 @@ void input_loop()
 				}
 				for (int x = 1; x < input_times.size(); ++x)
 				{
-					if (input_key[x] >= 'G' && input_key[x] <= 'H' && input_state[x] == 'v')
+					if ((input_key[x] == 'G' || input_key[x] == 'H' || input_key[x] == 'T' || input_key[x] == 'Y') && input_state[x] == 'v')
 					{
 						if (interlock == true)
 						{
@@ -220,7 +220,7 @@ void input_loop()
 				}
 				for (int x = 1; x < input_times.size(); ++x)
 				{
-					if (input_key[x] >= 'G' && input_key[x] <= 'H' && input_state[x] == '^')
+					if ((input_key[x] == 'G' || input_key[x] == 'H' || input_key[x] == 'T' || input_key[x] == 'Y') && input_state[x] == '^')
 					{
 						if (interlock2 == true)
 						{
