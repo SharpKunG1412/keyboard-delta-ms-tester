@@ -17,7 +17,7 @@
                 "-lglfw3dll",
                 "-lglfw3",
                 "-o",
-                "${workspaceFolder}\\Sharp-polling-test-logging-press.exe"
+                "${workspaceFolder}\\keyboard-delta-ms-tester.exe"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
